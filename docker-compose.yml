@@ -1,9 +1,37 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: shopai-db
+    environment:
+      POSTGRES_USER: shopai
+      POSTGRES_PASSWORD: shopai
+      POSTGRES_DB: shopai
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopai"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   shop-ai-backend:
     build: .
-    container_name: shop-ai-backend-mock
+    container_name: shop-ai-backend
     ports:
       - "8080:8080"
     environment:
-      HOST: 0.0.0.0
-      PORT: 8080
+      HOST: "0.0.0.0"
+      PORT: "8080"
+      POSTGRES_DSN: "postgresql+asyncpg://shopai:shopai@db:5432/shopai"
+      LOCAL_FAST_LLM_BASE_URL: "http://gpu-node:8000/v1"
+      LOCAL_FAST_LLM_MODEL: "fast-local-model"
+      LOCAL_DEEP_LLM_BASE_URL: "http://mac-mini:11434/v1"
+      LOCAL_DEEP_LLM_MODEL: "deep-local-model"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
